@@ -1,0 +1,122 @@
+@startuml
+title Диаграмма классов СМО расчёта стоимости доставки
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+class Source {
+  - id: int
+  - lambda: double
+  - dispatcher: PlacementDispatcher
+  - currentRequest: Request
+  --
+  + run(): void
+  + generateRequest(requestData: RequestData): Request
+  + notifyDispatcher(): void
+  + getRequest(): Request
+  + generateInterval(): long
+}
+
+class RequestData {
+  - clientId: int
+  - region: String
+  - city: String
+  - street: String
+  - index: int
+  - weight: double
+  - length: int
+  - width: int
+  - height: int
+}
+
+class Request {
+  - id: int
+  - sourceId: int
+  - clientId: int
+  - region: String
+  - city: String
+  - street: String
+  - index: int
+  - weight: double
+  - length: int
+  - width: int
+  - height: int
+  - timeIn: LocalDateTime
+}
+
+class PlacementDispatcher {
+  - buffer: Buffer
+  - selectionDispatcher: SelectionDispatcher
+  --
+  + processRequest(source: RequestSource): void
+}
+
+class Buffer {
+  - requests: Request[]
+  - capacity: int
+  - arrivalOrder: long[]
+  - nextPosition: int
+  - count: int
+  - nextArrivalOrder: long
+  --
+  + add(request: Request): void
+  + replace(newRequest: Request): Request
+  + extractOldest(): Request
+  + isEmpty(): boolean
+  + isFull(): boolean
+}
+note right of Buffer
+  Операции с буфером
+  синхронизированы
+end note
+
+class SelectionDispatcher {
+  - buffer: Buffer
+  - devices: List<Device>
+  --
+  + run(): void
+  + processRequests(): void
+  + getAvailableDevices(): List<Device>
+  + selectDevice(): Device
+  + handOverDevice(request: Request, device: Device): void
+}
+
+class Device {
+  - id: int
+  - priority: int
+  - available: boolean
+  - selectionDispatcher: SelectionDispatcher
+  - currentRequest: Request
+  --
+  + run(): void
+  + acceptRequest(request: Request): void
+  + calc(request: Request): DeliveryResult
+  + setSelectionDispatcher(dispatcher: SelectionDispatcher): void
+  + notifySelectionDispatcher(): void
+  + isAvailableToCalc(): boolean
+}
+
+class DeliveryResult {
+  - sum: double
+  - days: int
+  - companyName: String
+  - tariffName: String
+}
+
+Source --> PlacementDispatcher : уведомляет
+Source --> RequestData : использует
+Source --> Request : создаёт
+
+PlacementDispatcher --> Source : забирает заявку
+PlacementDispatcher --> Buffer : размещает
+
+
+Buffer "1" o-- "0..*" Request : хранит
+
+SelectionDispatcher --> Buffer : извлекает
+SelectionDispatcher "1" --> "1..*" Device : управляет
+
+Device --> SelectionDispatcher : уведомляет
+Device --> Request : обрабатывает
+Device --> DeliveryResult : формирует
+@enduml
