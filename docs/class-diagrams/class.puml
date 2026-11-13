@@ -9,8 +9,9 @@ class Source {
   - lambda: double
   - dispatcher: PlacementDispatcher
   - currentRequest: Request
+  - statistics: Statistics
   --
-  + run(): void
+  + onArrival(): void
   + generateRequest(requestData: RequestData): Request
   + notifyDispatcher(): void
   + getRequest(): Request
@@ -33,10 +34,8 @@ class Request {
   - id: int
   - sourceId: int
   - clientId: int
-  - region: String
-  - city: String
-  - street: String
-  - index: int
+  - fromIndex: String
+  - toIndex: String
   - weight: double
   - length: int
   - width: int
@@ -53,11 +52,11 @@ class PlacementDispatcher {
 
 class Buffer {
   - requests: Request[]
-  - capacity: int
   - arrivalOrder: long[]
   - nextPosition: int
   - count: int
   - nextArrivalOrder: long
+  - statistics: Statistics
   --
   + add(request: Request): void
   + replace(newRequest: Request): Request
@@ -74,7 +73,6 @@ class SelectionDispatcher {
   - buffer: Buffer
   - devices: List<Device>
   --
-  + run(): void
   + processRequests(): void
   + getAvailableDevices(): List<Device>
   + selectDevice(): Device
@@ -87,13 +85,10 @@ class Device {
   - available: boolean
   - selectionDispatcher: SelectionDispatcher
   - currentRequest: Request
+  - statistics: Statistics
   --
-  + run(): void
   + acceptRequest(request: Request): void
-  + calc(request: Request): DeliveryResult
-  + setSelectionDispatcher(dispatcher: SelectionDispatcher): void
-  + notifySelectionDispatcher(): void
-  + isAvailableToCalc(): boolean
+  + completeService(request: Request): DeliveryResult
 }
 
 class DeliveryResult {
@@ -102,6 +97,21 @@ class DeliveryResult {
   - companyName: String
   - tariffName: String
 }
+
+
+class Statistics {
+    - maxRequests: int
+    - generated: int
+    - served: int
+    - rejected: int
+    - totalSystemTime: double
+    - enteredAt: Map<Integer, Double>
+    --
+    + nextRequestId(): int
+    + registerReject(): void
+    + registerCompletion(): void
+}
+
 
 Source --> PlacementDispatcher : уведомляет
 Source --> RequestData : использует
@@ -119,4 +129,8 @@ SelectionDispatcher "1" --> "1..*" Device : управляет
 Device --> SelectionDispatcher : уведомляет
 Device --> Request : обрабатывает
 Device --> DeliveryResult : формирует
+
+Source --> Statistics : записывает статистику
+Buffer --> Statistics : записывает статистику
+Device --> Statistics : записывает статистику
 @enduml
